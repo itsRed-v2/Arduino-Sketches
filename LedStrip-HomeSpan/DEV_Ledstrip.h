@@ -30,7 +30,7 @@ struct ColorLedstrip : Service::LightBulb {
       staticColor.color = CRGB{ 0, 0, 0 };
     }
 
-    animationManager->fadeToAnimation(staticColor);
+    animationManager->queueAnimation(staticColor);
   }
 
   void refreshLeds() {
@@ -87,7 +87,7 @@ struct RainbowLedstrip : Service::LightBulb {
     enabled = on->getNewVal<bool>();
 
     if (enabled) {
-      animationManager->fadeToAnimation(rainbow);
+      animationManager->queueAnimation(rainbow);
     } else {
       onDisable();
     }

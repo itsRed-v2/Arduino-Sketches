@@ -7,20 +7,45 @@
 
 #define DATA_PIN 12
 #define LED_COUNT 150
-#define UPDATE_PERIOD 20
+#define UPDATE_PERIOD 20 // 1 frame per 20ms, eq 50fps
+#define TRANSITION_DURATION 500 // in milliseconds
+
+void lerpColors(CRGB* buf1, CRGB* buf2, CRGB* dest, float t, uint16_t size) {
+  for (int i = 0; i < size; i++) { // iterate over leds
+    for (int j = 0; j < 3; j++) { // iterate over color channels r, g, b
+      uint8_t color1 = buf1[i][j];
+      uint8_t color2 = buf2[i][j];
+      dest[i][j] = (uint8_t) (color1 * (1-t) + color2 * t);
+    }
+  }
+}
+
+struct QueuedAnimation {
+  Animation* anim;
+  uint32_t duration;
+  uint32_t start;
+  bool infinite;
+
+  static QueuedAnimation makeInfinite(Animation* animptr) {
+    return { animptr, 0, 0, true };
+  }
+
+  static QueuedAnimation makeDuration(Animation* animptr, uint32_t ms) {
+    return { animptr, ms, 0, false };
+  }
+};
 
 struct AnimationManager {
   uint32_t lastUpdateTime = 0;
-  uint32_t transitionDuration = 0;
   uint32_t transitionStart = 0;
-  Animation *currentAnimation;
-  Animation *newAnimation = nullptr;
+  vector<QueuedAnimation> animationQueue {};
 
   CRGB mainBuffer[LED_COUNT];
   CRGB secondaryBuffer[LED_COUNT];
 
   AnimationManager(Animation &initialAnimation) {
-    currentAnimation = initialAnimation.clone();
+    animationQueue.push_back(
+      QueuedAnimation::makeInfinite(initialAnimation.clone()));
   }
 
   void setupFastLED() {
@@ -32,31 +57,39 @@ struct AnimationManager {
     if (time - lastUpdateTime < UPDATE_PERIOD || lastUpdateTime > time) return;
     lastUpdateTime = time;
 
-    currentAnimation->render(time, mainBuffer, LED_COUNT);
+    if (animationQueue.empty()) return; // This should never happen
 
-    if (newAnimation != nullptr) {
-      uint32_t transitionElapsed = time - transitionStart;
+    QueuedAnimation current = animationQueue[0];
+    current.anim->render(time, mainBuffer, LED_COUNT);
 
-      if (transitionElapsed > transitionDuration) {
-        newAnimation->render(time, mainBuffer, LED_COUNT);
-        delete currentAnimation;
-        currentAnimation = newAnimation;
-        newAnimation = nullptr;
-        transitionStart = 0;
-        transitionDuration = 0;
-      } else {
-        newAnimation->render(time, secondaryBuffer, LED_COUNT);
+    if (animationQueue.size() > 1) {
+      QueuedAnimation next = animationQueue[1];
 
-        float transitionProgress = 
-          ((float)transitionElapsed) / ((float)transitionDuration);
-        
-        for (int i = 0; i < LED_COUNT; i++) {
-          for (int j = 0; j < 3; j++) {
-            uint8_t color1 = mainBuffer[i][j];
-            uint8_t color2 = secondaryBuffer[i][j];
-            uint8_t fadedColor = (uint8_t) (color1 * (1 - transitionProgress) + color2 * transitionProgress);
-            mainBuffer[i][j] = fadedColor;
-          }
+      // If no transition is happening AND current animation can hand over
+      if (transitionStart == 0
+            && (current.infinite || time - current.start >= current.duration)) {
+        transitionStart = time;
+        next.start = time;
+      }
+
+      if (transitionStart != 0) { // if transition is happening
+        uint32_t transitionElapsed = time - transitionStart;
+
+        // if transition reached its end
+        if (transitionElapsed > TRANSITION_DURATION) {
+          delete current.anim;
+          animationQueue.erase(animationQueue.begin());
+          transitionStart = 0;
+          animationQueue[0].anim->render(time, mainBuffer, LED_COUNT);
+        } else { // during transition
+          next.anim->render(time, secondaryBuffer, LED_COUNT);
+          
+          float progress = 
+            ((float)transitionElapsed) / ((float)TRANSITION_DURATION);
+          lerpColors(
+            mainBuffer, secondaryBuffer, mainBuffer, 
+            progress, LED_COUNT
+          );
         }
       }
     }
@@ -64,11 +97,14 @@ struct AnimationManager {
     FastLED.show();
   }
 
-  void fadeToAnimation(Animation &animation) {
-    if (newAnimation != nullptr) delete newAnimation;
-    newAnimation = animation.clone();
-    transitionDuration = 500; // 0.5s
-    transitionStart = millis();
+  void queueAnimation(Animation &animation) {
+    if (animationQueue.size() >= 3) {
+      delete animationQueue.back().anim;
+      animationQueue.pop_back();
+    }
+    
+    animationQueue.push_back(
+      QueuedAnimation::makeInfinite(animation.clone()));
   }
 
 };
