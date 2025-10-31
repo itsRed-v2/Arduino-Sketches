@@ -7,9 +7,7 @@ struct ColorLedstrip : Service::LightBulb {
   SpanCharacteristic *saturation;
   SpanCharacteristic *brightness;
   AnimationManager *animationManager;
-  Animations::StaticColor staticColor1 { CRGB{0, 0, 0} };
-  Animations::StaticColor staticColor2 { CRGB{0, 0, 0} };
-  Animations::StaticColor *ptr1 = &staticColor1, *ptr2 = &staticColor2;
+  Animations::StaticColor staticColor { CRGB{0, 0, 0} };
   bool(*isRainbowEnabled)();
 
   ColorLedstrip(AnimationManager *animation_manager) : Service::LightBulb() {
@@ -22,21 +20,17 @@ struct ColorLedstrip : Service::LightBulb {
   }
 
   void sendToStrip(bool isOn, float h, float s, float v) {
-    Animations::StaticColor *temp = ptr1;
-    ptr1 = ptr2;
-    ptr2 = temp;
-
     if (isOn) {
-      ptr1->color = hsvToRgb(
+      staticColor.color = hsvToRgb(
         static_cast<uint16_t>(h),
         static_cast<uint8_t>(s * 255 / 100),
         static_cast<uint8_t>(v * 255 / 100)
       );
     } else {
-      ptr1->color = CRGB{ 0, 0, 0 };
+      staticColor.color = CRGB{ 0, 0, 0 };
     }
 
-    animationManager->fadeToAnimation(ptr1);
+    animationManager->fadeToAnimation(staticColor);
   }
 
   void refreshLeds() {
@@ -93,7 +87,7 @@ struct RainbowLedstrip : Service::LightBulb {
     enabled = on->getNewVal<bool>();
 
     if (enabled) {
-      animationManager->fadeToAnimation(&rainbow);
+      animationManager->fadeToAnimation(rainbow);
     } else {
       onDisable();
     }

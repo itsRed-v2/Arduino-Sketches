@@ -7,6 +7,7 @@ CRGB hsvToRgb(uint16_t h, uint8_t s, uint8_t v);
 
 struct Animation {
   virtual void render(uint32_t time_ms, CRGB *colors, uint16_t led_count) = 0;
+  virtual Animation* clone() = 0;
 };
 
 namespace Animations {
@@ -16,6 +17,10 @@ namespace Animations {
       for (uint16_t i = 0; i < led_count; i++) {
         colors[i] = CRGB{ (uint8_t) (time_ms * 255 / 1000), 0, 0};
       }
+    }
+
+    Animation* clone() {
+      return new BeatingRed(*this);
     }
   };
 
@@ -29,6 +34,10 @@ namespace Animations {
         colors[i] = color;
       }
     }
+
+    Animation* clone() {
+      return new StaticColor(*this);
+    }
   };
 
   struct Rainbow: Animation {
@@ -38,6 +47,10 @@ namespace Animations {
         value = value * 359 / 256;
         colors[i] = hsvToRgb(((uint32_t) value) % 360, 255, 255);
       }
+    }
+
+    Animation* clone() {
+      return new Rainbow(*this);
     }
   };
 

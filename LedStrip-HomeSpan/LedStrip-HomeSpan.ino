@@ -7,7 +7,7 @@ RainbowLedstrip* rainbowService;
 ColorLedstrip* colorService;
 
 Animations::BeatingRed defaultAnimation = Animations::BeatingRed();
-AnimationManager animationManager { &defaultAnimation };
+AnimationManager animationManager { defaultAnimation };
 
 bool isRainbowEnabled() {
   return rainbowService->on->getVal<bool>();

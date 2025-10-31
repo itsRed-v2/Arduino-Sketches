@@ -19,8 +19,8 @@ struct AnimationManager {
   CRGB mainBuffer[LED_COUNT];
   CRGB secondaryBuffer[LED_COUNT];
 
-  AnimationManager(Animation* initialAnimation) {
-    currentAnimation = initialAnimation;
+  AnimationManager(Animation &initialAnimation) {
+    currentAnimation = initialAnimation.clone();
   }
 
   void setupFastLED() {
@@ -39,6 +39,7 @@ struct AnimationManager {
 
       if (transitionElapsed > transitionDuration) {
         newAnimation->render(time, mainBuffer, LED_COUNT);
+        delete currentAnimation;
         currentAnimation = newAnimation;
         newAnimation = nullptr;
         transitionStart = 0;
@@ -63,12 +64,9 @@ struct AnimationManager {
     FastLED.show();
   }
 
-  void setAnimation(Animation *animation) {
-    currentAnimation = animation;
-  }
-
-  void fadeToAnimation(Animation *animation) {
-    newAnimation = animation;
+  void fadeToAnimation(Animation &animation) {
+    if (newAnimation != nullptr) delete newAnimation;
+    newAnimation = animation.clone();
     transitionDuration = 500; // 0.5s
     transitionStart = millis();
   }
