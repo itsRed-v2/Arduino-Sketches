@@ -7,7 +7,8 @@ CRGB hsvToRgb(uint16_t h, uint8_t s, uint8_t v);
 
 struct Animation {
   virtual void render(uint32_t time_ms, CRGB *colors, uint16_t led_count) = 0;
-  virtual Animation* clone() = 0;
+  virtual Animation* clone() const = 0;
+  virtual ~Animation() {};
 };
 
 namespace Animations {
@@ -19,7 +20,7 @@ namespace Animations {
       }
     }
 
-    Animation* clone() {
+    Animation* clone() const {
       return new BeatingRed(*this);
     }
   };
@@ -35,7 +36,7 @@ namespace Animations {
       }
     }
 
-    Animation* clone() {
+    Animation* clone() const {
       return new StaticColor(*this);
     }
   };
@@ -49,7 +50,7 @@ namespace Animations {
       }
     }
 
-    Animation* clone() {
+    Animation* clone() const {
       return new Rainbow(*this);
     }
   };

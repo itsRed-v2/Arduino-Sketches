@@ -2,6 +2,7 @@
 #define ANIMATION_MANAGER_H
 
 #include <FastLED.h>
+#include <vector>
 
 #include "Animation.h"
 
@@ -26,26 +27,42 @@ struct QueuedAnimation {
   uint32_t start;
   bool infinite;
 
-  static QueuedAnimation makeInfinite(Animation* animptr) {
-    return { animptr, 0, 0, true };
+  QueuedAnimation(const Animation &anim):
+      anim(anim.clone()), duration(0), start(0), infinite(true) {}
+
+  QueuedAnimation(const Animation &anim, uint32_t ms):
+      anim(anim.clone()), duration(ms), start(0), infinite(false) {}
+
+  QueuedAnimation(const QueuedAnimation &other):
+      anim(other.anim->clone()), duration(other.duration),
+      start(other.start), infinite(other.infinite) {}
+
+  QueuedAnimation &operator=(const QueuedAnimation &other) {
+    if (this != &other) {
+      duration = other.duration;
+      start = other.start;
+      infinite = other.infinite;
+      delete anim;
+      anim = other.anim->clone();
+    }
+    return *this;
   }
 
-  static QueuedAnimation makeDuration(Animation* animptr, uint32_t ms) {
-    return { animptr, ms, 0, false };
+  ~QueuedAnimation() {
+    delete anim;
   }
 };
 
 struct AnimationManager {
   uint32_t lastUpdateTime = 0;
   uint32_t transitionStart = 0;
-  vector<QueuedAnimation> animationQueue {};
+  std::vector<QueuedAnimation> animationQueue {};
 
   CRGB mainBuffer[LED_COUNT];
   CRGB secondaryBuffer[LED_COUNT];
 
   AnimationManager(Animation &initialAnimation) {
-    animationQueue.push_back(
-      QueuedAnimation::makeInfinite(initialAnimation.clone()));
+    animationQueue.push_back(QueuedAnimation(initialAnimation));
   }
 
   void setupFastLED() {
@@ -77,17 +94,16 @@ struct AnimationManager {
 
         // if transition reached its end
         if (transitionElapsed > TRANSITION_DURATION) {
-          delete current.anim;
           animationQueue.erase(animationQueue.begin());
           transitionStart = 0;
           animationQueue[0].anim->render(time, mainBuffer, LED_COUNT);
         } else { // during transition
           next.anim->render(time, secondaryBuffer, LED_COUNT);
-          
-          float progress = 
+
+          float progress =
             ((float)transitionElapsed) / ((float)TRANSITION_DURATION);
           lerpColors(
-            mainBuffer, secondaryBuffer, mainBuffer, 
+            mainBuffer, secondaryBuffer, mainBuffer,
             progress, LED_COUNT
           );
         }
@@ -99,12 +115,10 @@ struct AnimationManager {
 
   void queueAnimation(Animation &animation) {
     if (animationQueue.size() >= 3) {
-      delete animationQueue.back().anim;
       animationQueue.pop_back();
     }
-    
-    animationQueue.push_back(
-      QueuedAnimation::makeInfinite(animation.clone()));
+
+    animationQueue.push_back(QueuedAnimation(animation));
   }
 
 };

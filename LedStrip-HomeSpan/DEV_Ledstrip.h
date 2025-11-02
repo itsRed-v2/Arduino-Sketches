@@ -1,4 +1,6 @@
 #include <FastLED.h>
+#include <HomeSpan.h>
+
 #include "AnimationManager.h"
 
 struct ColorLedstrip : Service::LightBulb {
