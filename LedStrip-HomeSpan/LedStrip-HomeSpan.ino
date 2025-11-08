@@ -2,20 +2,14 @@
 
 #include "DEV_Ledstrip.h"
 #include "AnimationManager.h"
+#include "StateMachine.h"
 
 RainbowLedstrip* rainbowService;
 ColorLedstrip* colorService;
 
 Animations::BeatingRed defaultAnimation = Animations::BeatingRed();
 AnimationManager animationManager { defaultAnimation };
-
-bool isRainbowEnabled() {
-    return rainbowService->on->getVal<bool>();
-}
-
-void onRainbowDisable() {
-    colorService->refreshLeds();
-}
+StateMachine stateMachine { animationManager };
 
 void setup() {
     // Serial.begin(115200);
@@ -28,11 +22,8 @@ void setup() {
         new Service::AccessoryInformation();
             new Characteristic::Identify();
 
-        colorService = new ColorLedstrip(&animationManager);
-        rainbowService = new RainbowLedstrip(&animationManager);
-
-    colorService->isRainbowEnabled = isRainbowEnabled;
-    rainbowService->onDisable = onRainbowDisable;
+        colorService = new ColorLedstrip(stateMachine);
+        rainbowService = new RainbowLedstrip(stateMachine);
 
     animationManager.setupFastLED();
 }

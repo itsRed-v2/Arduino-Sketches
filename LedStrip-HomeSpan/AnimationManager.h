@@ -111,7 +111,7 @@ struct AnimationManager {
         FastLED.show();
     }
 
-    void queueAnimation(Animation &animation) {
+    void queueAnimation(const Animation &animation) {
         if (animationQueue.size() >= 3) {
             animationQueue.pop_back();
         }
