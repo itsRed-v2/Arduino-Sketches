@@ -10,34 +10,34 @@ Animations::BeatingRed defaultAnimation = Animations::BeatingRed();
 AnimationManager animationManager { defaultAnimation };
 
 bool isRainbowEnabled() {
-  return rainbowService->on->getVal<bool>();
+    return rainbowService->on->getVal<bool>();
 }
 
 void onRainbowDisable() {
-  colorService->refreshLeds();
+    colorService->refreshLeds();
 }
 
 void setup() {
-  // Serial.begin(115200);
+    // Serial.begin(115200);
 
-  homeSpan.setStatusPin(2);
-  homeSpan.setControlPin(5, PushButton::TRIGGER_ON_LOW);
-  homeSpan.begin(Category::Lighting, "WS2812B Ledstrip");
+    homeSpan.setStatusPin(2);
+    homeSpan.setControlPin(5, PushButton::TRIGGER_ON_LOW);
+    homeSpan.begin(Category::Lighting, "WS2812B Ledstrip");
 
-  new SpanAccessory();
-    new Service::AccessoryInformation();
-      new Characteristic::Identify();
+    new SpanAccessory();
+        new Service::AccessoryInformation();
+            new Characteristic::Identify();
 
-    colorService = new ColorLedstrip(&animationManager);
-    rainbowService = new RainbowLedstrip(&animationManager);
+        colorService = new ColorLedstrip(&animationManager);
+        rainbowService = new RainbowLedstrip(&animationManager);
 
-  colorService->isRainbowEnabled = isRainbowEnabled;
-  rainbowService->onDisable = onRainbowDisable;
+    colorService->isRainbowEnabled = isRainbowEnabled;
+    rainbowService->onDisable = onRainbowDisable;
 
-  animationManager.setupFastLED();
+    animationManager.setupFastLED();
 }
 
 void loop() {
-  homeSpan.poll();
-  animationManager.update();
+    homeSpan.poll();
+    animationManager.update();
 }

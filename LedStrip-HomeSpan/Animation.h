@@ -6,54 +6,54 @@
 CRGB hsvToRgb(uint16_t h, uint8_t s, uint8_t v);
 
 struct Animation {
-  virtual void render(uint32_t time_ms, CRGB *colors, uint16_t led_count) = 0;
-  virtual Animation* clone() const = 0;
-  virtual ~Animation() {};
+    virtual void render(uint32_t time_ms, CRGB *colors, uint16_t led_count) = 0;
+    virtual Animation* clone() const = 0;
+    virtual ~Animation() {};
 };
 
 namespace Animations {
 
-  struct BeatingRed: Animation {
-    void render(uint32_t time_ms, CRGB *colors, uint16_t led_count) override {
-      for (uint16_t i = 0; i < led_count; i++) {
-        colors[i] = CRGB{ (uint8_t) (time_ms * 255 / 1000), 0, 0};
-      }
-    }
+    struct BeatingRed: Animation {
+        void render(uint32_t time_ms, CRGB *colors, uint16_t led_count) override {
+            for (uint16_t i = 0; i < led_count; i++) {
+                colors[i] = CRGB{ (uint8_t) (time_ms * 255 / 1000), 0, 0};
+            }
+        }
 
-    Animation* clone() const {
-      return new BeatingRed(*this);
-    }
-  };
+        Animation* clone() const {
+            return new BeatingRed(*this);
+        }
+    };
 
-  struct StaticColor: Animation {
-    CRGB color;
+    struct StaticColor: Animation {
+        CRGB color;
 
-    StaticColor(CRGB color): color(color) {}
+        StaticColor(CRGB color): color(color) {}
 
-    void render(uint32_t time_ms, CRGB *colors, uint16_t led_count) override {
-      for (uint16_t i = 0; i < led_count; i++) {
-        colors[i] = color;
-      }
-    }
+        void render(uint32_t time_ms, CRGB *colors, uint16_t led_count) override {
+            for (uint16_t i = 0; i < led_count; i++) {
+                colors[i] = color;
+            }
+        }
 
-    Animation* clone() const {
-      return new StaticColor(*this);
-    }
-  };
+        Animation* clone() const {
+            return new StaticColor(*this);
+        }
+    };
 
-  struct Rainbow: Animation {
-    void render(uint32_t time_ms, CRGB *colors, uint16_t led_count) override {
-      for(uint16_t i = 0; i < led_count; i++) {
-        float value = (time_ms >> 7) + (i << 0);
-        value = value * 359 / 256;
-        colors[i] = hsvToRgb(((uint32_t) value) % 360, 255, 255);
-      }
-    }
+    struct Rainbow: Animation {
+        void render(uint32_t time_ms, CRGB *colors, uint16_t led_count) override {
+            for(uint16_t i = 0; i < led_count; i++) {
+                float value = (time_ms >> 7) + (i << 0);
+                value = value * 359 / 256;
+                colors[i] = hsvToRgb(((uint32_t) value) % 360, 255, 255);
+            }
+        }
 
-    Animation* clone() const {
-      return new Rainbow(*this);
-    }
-  };
+        Animation* clone() const {
+            return new Rainbow(*this);
+        }
+    };
 
 }
 
