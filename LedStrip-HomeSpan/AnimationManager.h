@@ -74,39 +74,37 @@ struct AnimationManager {
         if (time - lastUpdateTime < UPDATE_PERIOD || lastUpdateTime > time) return;
         lastUpdateTime = time;
 
-        if (animationQueue.empty()) return; // This should never happen
+        if (animationQueue.empty()) {
+            return; // This should never happen
+        } else if (animationQueue.size() == 1) { // If there is only one animation left in the queue
+            QueuedAnimation current = animationQueue[0];
+            current.anim->render(time, mainBuffer, LED_COUNT);
+        } else if (transitionStart == 0) { // More than one animation in queue and no transition is happening
+            QueuedAnimation current = animationQueue[0];
+            current.anim->render(time, mainBuffer, LED_COUNT);
 
-        QueuedAnimation current = animationQueue[0];
-        current.anim->render(time, mainBuffer, LED_COUNT);
-
-        if (animationQueue.size() > 1) {
-            QueuedAnimation next = animationQueue[1];
-
-            // If no transition is happening AND current animation can hand over
-            if (transitionStart == 0
-                        && (current.infinite || time - current.start >= current.duration)) {
+            // If current animation is done, start transition in next frame
+            if (current.infinite || time - current.start >= current.duration) {
+                QueuedAnimation next = animationQueue[1];
                 transitionStart = time;
                 next.start = time;
             }
+        } else { // if transition is happening
+            uint32_t transitionElapsed = time - transitionStart;
 
-            if (transitionStart != 0) { // if transition is happening
-                uint32_t transitionElapsed = time - transitionStart;
+            // if transition reached its end
+            if (transitionElapsed > TRANSITION_DURATION) {
+                animationQueue.erase(animationQueue.begin());
+                transitionStart = 0;
+                animationQueue[0].anim->render(time, mainBuffer, LED_COUNT);
+            } else { // during transition
+                QueuedAnimation current = animationQueue[0];
+                QueuedAnimation next = animationQueue[1];
+                current.anim->render(time, mainBuffer, LED_COUNT);
+                next.anim->render(time, secondaryBuffer, LED_COUNT);
 
-                // if transition reached its end
-                if (transitionElapsed > TRANSITION_DURATION) {
-                    animationQueue.erase(animationQueue.begin());
-                    transitionStart = 0;
-                    animationQueue[0].anim->render(time, mainBuffer, LED_COUNT);
-                } else { // during transition
-                    next.anim->render(time, secondaryBuffer, LED_COUNT);
-
-                    float progress =
-                        ((float)transitionElapsed) / ((float)TRANSITION_DURATION);
-                    lerpColors(
-                        mainBuffer, secondaryBuffer, mainBuffer,
-                        progress, LED_COUNT
-                    );
-                }
+                float progress = ((float)transitionElapsed) / ((float)TRANSITION_DURATION);
+                lerpColors(mainBuffer, secondaryBuffer, mainBuffer, progress, LED_COUNT);
             }
         }
 
