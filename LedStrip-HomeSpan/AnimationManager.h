@@ -21,6 +21,16 @@ void lerpColors(CRGB* buf1, CRGB* buf2, CRGB* dest, float t, uint16_t size) {
     }
 }
 
+void adjustForLightPerception(CRGB* buffer, uint16_t led_count) {
+    for (int i = 0; i < led_count; i++) {
+        for (int channel = 0; channel < 3; channel++) {
+            float value = buffer[i][channel];
+            float adjusted = (value / 255) * (value / 255) * 255;
+            buffer[i][channel] = (uint8_t) adjusted;
+        }
+    }
+}
+
 struct QueuedAnimation {
     Animation* anim;
     uint32_t duration;
@@ -63,6 +73,7 @@ struct AnimationManager {
 
     AnimationManager(Animation &initialAnimation) {
         animationQueue.push_back(QueuedAnimation(initialAnimation));
+        animationQueue.back().start = millis();
     }
 
     void setupFastLED() {
@@ -74,18 +85,25 @@ struct AnimationManager {
         if (time - lastUpdateTime < UPDATE_PERIOD || lastUpdateTime > time) return;
         lastUpdateTime = time;
 
+        // TODO: per-animation time origin
+
         if (animationQueue.empty()) {
             return; // This should never happen
         } else if (animationQueue.size() == 1) { // If there is only one animation left in the queue
-            QueuedAnimation current = animationQueue[0];
-            current.anim->render(time, mainBuffer, LED_COUNT);
+            QueuedAnimation &current = animationQueue[0];
+            current.anim->render(time - current.start, mainBuffer, LED_COUNT);
+
+            if (!current.infinite && time - current.start >= current.duration) {
+                Animations::StaticColor black { CRGB::Black };
+                animationQueue.push_back(QueuedAnimation(black));
+            }
         } else if (transitionStart == 0) { // More than one animation in queue and no transition is happening
-            QueuedAnimation current = animationQueue[0];
-            current.anim->render(time, mainBuffer, LED_COUNT);
+            QueuedAnimation &current = animationQueue[0];
+            current.anim->render(time - current.start, mainBuffer, LED_COUNT);
 
             // If current animation is done, start transition in next frame
             if (current.infinite || time - current.start >= current.duration) {
-                QueuedAnimation next = animationQueue[1];
+                QueuedAnimation &next = animationQueue[1];
                 transitionStart = time;
                 next.start = time;
             }
@@ -96,27 +114,33 @@ struct AnimationManager {
             if (transitionElapsed > TRANSITION_DURATION) {
                 animationQueue.erase(animationQueue.begin());
                 transitionStart = 0;
-                animationQueue[0].anim->render(time, mainBuffer, LED_COUNT);
+                QueuedAnimation &newCurrent = animationQueue[0];
+                newCurrent.anim->render(time - newCurrent.start, mainBuffer, LED_COUNT);
             } else { // during transition
-                QueuedAnimation current = animationQueue[0];
-                QueuedAnimation next = animationQueue[1];
-                current.anim->render(time, mainBuffer, LED_COUNT);
-                next.anim->render(time, secondaryBuffer, LED_COUNT);
+                QueuedAnimation &current = animationQueue[0];
+                QueuedAnimation &next = animationQueue[1];
+                current.anim->render(time - current.start, mainBuffer, LED_COUNT);
+                next.anim->render(time - next.start, secondaryBuffer, LED_COUNT);
 
                 float progress = ((float)transitionElapsed) / ((float)TRANSITION_DURATION);
                 lerpColors(mainBuffer, secondaryBuffer, mainBuffer, progress, LED_COUNT);
             }
         }
 
+        adjustForLightPerception(mainBuffer, LED_COUNT);
         FastLED.show();
     }
 
     void queueAnimation(const Animation &animation) {
-        if (animationQueue.size() >= 3) {
+        if (animationQueue.size() >= 3 && animationQueue.back().infinite) {
             animationQueue.pop_back();
         }
 
         animationQueue.push_back(QueuedAnimation(animation));
+    }
+
+    void queueAnimationDuration(const Animation &animation, uint32_t duration) {
+        animationQueue.push_back(QueuedAnimation(animation, duration));
     }
 
 };
