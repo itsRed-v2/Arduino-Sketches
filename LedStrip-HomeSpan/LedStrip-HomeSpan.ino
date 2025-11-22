@@ -7,15 +7,20 @@
 RainbowLedstrip* rainbowService;
 ColorLedstrip* colorService;
 
-Animations::BeatingRed defaultAnimation = Animations::BeatingRed();
+Animations::StaticColor defaultAnimation { CRGB::Black };
 AnimationManager animationManager { defaultAnimation };
 StateMachine stateMachine { animationManager };
+
+void homeSpanStatusCallback(HS_STATUS status) {
+    stateMachine.setHomeSpanStatus(status);
+}
 
 void setup() {
     // Serial.begin(115200);
 
     homeSpan.setStatusPin(2);
     homeSpan.setControlPin(5, PushButton::TRIGGER_ON_LOW);
+    homeSpan.setStatusCallback(homeSpanStatusCallback);
     homeSpan.begin(Category::Lighting, "WS2812B Ledstrip");
 
     new SpanAccessory();

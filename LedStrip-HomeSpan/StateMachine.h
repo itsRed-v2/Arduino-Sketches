@@ -2,6 +2,7 @@
 #define STATE_MACHINE_H
 
 #include <FastLED.h>
+#include <HomeSpan.h>
 #include "AnimationManager.h"
 
 class StateMachine {
@@ -9,6 +10,7 @@ private:
     bool rainbowEnabled = false;
     bool staticColorEnabled = false;
     CRGB staticColor{0, 0, 0};
+    HS_STATUS homeSpanStatus = HS_WIFI_NEEDED;
 
     AnimationManager &animationManager;
 
@@ -17,25 +19,38 @@ public:
 
     void enableRainbow(bool enable) {
         rainbowEnabled = enable;
-        onUpdate();
+        updateState();
     }
 
     void setStaticColor(CRGB color) {
-        staticColorEnabled = (color == CRGB{0, 0, 0});
+        staticColorEnabled = (color != CRGB{0, 0, 0});
         staticColor = color;
-        onUpdate();
+        updateState();
+    }
+
+    void setHomeSpanStatus(HS_STATUS status) {
+        homeSpanStatus = status;
+        if (homeSpanStatus == HS_PAIRED) {
+            Animations::ConnectionSuccess anim {};
+            animationManager.queueAnimationDuration(anim, 2000);
+        }
+        updateState();
     }
 
 private:
-    void onUpdate() {
-        if (rainbowEnabled) {
+    void updateState() {
+        if (homeSpanStatus == HS_WIFI_CONNECTING) {
+            Animations::Connecting anim {};
+            animationManager.queueAnimation(anim);
+        }
+        else if (rainbowEnabled) {
             Animations::Rainbow anim {};
             animationManager.queueAnimation(anim);
         } else if (staticColorEnabled) {
             Animations::StaticColor anim {staticColor};
             animationManager.queueAnimation(anim);
         } else {
-            Animations::StaticColor anim { CRGB{0, 0, 0} };
+            Animations::StaticColor anim { CRGB::Black };
             animationManager.queueAnimation(anim);
         }
     }
