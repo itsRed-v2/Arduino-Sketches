@@ -19,6 +19,7 @@ void setup() {
     // Serial.begin(115200);
 
     homeSpan.setStatusPin(2);
+    homeSpan.setStatusAutoOff(60);
     homeSpan.setControlPin(5, PushButton::TRIGGER_ON_LOW);
     homeSpan.setStatusCallback(homeSpanStatusCallback);
     homeSpan.begin(Category::Lighting, "WS2812B Ledstrip");

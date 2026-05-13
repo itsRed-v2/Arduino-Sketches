@@ -11,6 +11,7 @@ private:
     bool staticColorEnabled = false;
     CRGB staticColor{0, 0, 0};
     HS_STATUS homeSpanStatus = HS_WIFI_NEEDED;
+    bool hasBeenPaired = false;
 
     AnimationManager &animationManager;
 
@@ -30,9 +31,10 @@ public:
 
     void setHomeSpanStatus(HS_STATUS status) {
         homeSpanStatus = status;
-        if (homeSpanStatus == HS_PAIRED) {
+        if (!hasBeenPaired && homeSpanStatus == HS_PAIRED) {
             Animations::ConnectionSuccess anim {};
             animationManager.queueAnimationDuration(anim, 2000);
+            hasBeenPaired = true;
         }
         updateState();
     }
